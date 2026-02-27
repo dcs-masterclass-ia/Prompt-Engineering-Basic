@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Masterclass : Le Prompting pour les Débutants</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ink: #0c1222;
+            --ink-soft: #334155;
+            --ink-muted: #64748b;
+            --surface: #f8fafc;
+            --blue-primary: #2563eb;
+            --emerald-primary: #059669;
+            --red-primary: #dc2626;
+            --amber-primary: #d97706;
+            --radius-xl: 28px;
+            --slide-transition: 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; background-color: var(--surface); color: var(--ink); -webkit-font-smoothing: antialiased; }
+
+        /* --- BACKGROUNDS & BLOBS --- */
+        .blob { position: fixed; filter: blur(100px); z-index: 0; opacity: 0.45; animation: blobFloat 18s infinite ease-in-out; pointer-events: none; }
+        .blob-1 { top: -15%; left: -10%; width: 550px; height: 550px; background: radial-gradient(circle, #e0e7ff 0%, #dbeafe 100%); animation-delay: 0s; }
+        .blob-2 { bottom: -15%; right: -10%; width: 650px; height: 650px; background: radial-gradient(circle, #f3e8ff 0%, #e0e7ff 100%); animation-delay: 6s; }
+        .blob-3 { top: 35%; left: 45%; width: 350px; height: 350px; background: radial-gradient(circle, #fef3c7 0%, #fff7ed 100%); animation-delay: 3s; opacity: 0.3; }
+        
+        @keyframes blobFloat { 0%, 100% { transform: translate(0, 0) scale(1); } 33% { transform: translate(25px, 40px) scale(1.03); } 66% { transform: translate(-15px, 20px) scale(0.97); } }
+
+        /* --- SLIDE SYSTEM --- */
+        .slide { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; opacity: 0; pointer-events: none; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 2rem; z-index: 1; transition: opacity var(--slide-transition), transform var(--slide-transition), filter var(--slide-transition); transform: scale(0.97) translateY(16px); filter: blur(4px); }
+        .slide.active { opacity: 1; pointer-events: auto; transform: scale(1) translateY(0); filter: blur(0px); z-index: 10; }
+
+        .anim { opacity: 0; transform: translateY(22px); transition: opacity 0.5s ease-out, transform 0.5s ease-out; }
+        .active .anim { opacity: 1; transform: translateY(0); }
+        .d1 { transition-delay: 100ms; } .d2 { transition-delay: 180ms; } .d3 { transition-delay: 260ms; } .d4 { transition-delay: 340ms; } .d5 { transition-delay: 420ms; }
+
+        /* --- CARDS ZÉRO BORDURE STRICT --- */
+        .glass { background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(20px); border: none; box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.08); border-radius: var(--radius-xl); }
+        .glass-strong { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(24px); border: none; box-shadow: 0 16px 50px -12px rgba(0, 0, 0, 0.1); border-radius: var(--radius-xl); }
+        .logo-box { background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(12px); border: none; box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.08); border-radius: 20px; padding: 15px 30px; }
+
+        /* --- NAVIGATION --- */
+        .nav-btn { padding: 14px; border-radius: 50%; border: none; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; outline: none; background: white; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06); }
+        .nav-prev { color: var(--ink-muted); }
+        .nav-prev:hover { color: var(--blue-primary); background: #f8fafc; transform: translateX(-2px); }
+        .nav-next { background: var(--ink); color: white; }
+        .nav-next:hover { background: var(--blue-primary); transform: scale(1.05); box-shadow: 0 8px 25px rgba(37,99,235,0.3); }
+        
+        .progress-track { height: 4px; background: #e2e8f0; }
+        .progress-fill { height: 100%; background: var(--blue-primary); transition: width 0.4s ease; }
+
+        /* --- UI ELEMENTS --- */
+        .badge { display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px; border-radius: 999px; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; border: none; }
+        .chat-bubble { background: #f1f5f9; padding: 16px; border-radius: 20px 20px 20px 4px; font-size: 0.9rem; color: #334155; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
+        .chat-bubble-ai { background: #eff6ff; padding: 16px; border-radius: 20px 20px 4px 20px; font-size: 0.9rem; color: #1e3a8a; border: none; box-shadow: 0 4px 15px rgba(37,99,235,0.06); }
+        .content-scroll { max-height: 80vh; overflow-y: auto; padding-right: 1rem; scrollbar-width: thin; }
+        
+        /* Interactive Prompt Builder */
+        .builder-step { cursor: pointer; transition: 0.3s; opacity: 0.5; border: none; }
+        .builder-step.active { opacity: 1; transform: scale(1.05); }
+        
+        /* Quiz */
+        .quiz-option { width: 100%; padding: 16px; border-radius: 16px; background: white; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.04); text-align: left; transition: all 0.2s; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 12px; color: var(--ink-soft); font-size: 0.95rem; }
+        .quiz-option:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(37,99,235,0.12); color: var(--blue-primary); }
+        .quiz-option.correct { background: #dcfce7; color: #166534; box-shadow: inset 0 0 0 3px #22c55e, 0 8px 20px rgba(34, 197, 94, 0.15); }
+        .quiz-option.wrong { background: #fee2e2; color: #991b1b; opacity: 0.7; box-shadow: inset 0 0 0 3px #ef4444; }
+    </style>
+</head>
+<body>
+
+    <div class="blob blob-1"></div><div class="blob blob-2"></div><div class="blob blob-3"></div>
+
+    <nav class="fixed bottom-6 right-6 z-50 flex items-center gap-4">
+        <span id="slideCounter" class="font-mono text-sm font-bold text-slate-400 mr-2">01 / 42</span>
+        <button onclick="prevSlide()" class="nav-btn nav-prev"><i data-lucide="arrow-left" width="20"></i></button>
+        <button onclick="nextSlide()" class="nav-btn nav-next"><i data-lucide="arrow-right" width="20"></i></button>
+    </nav>
+    <div class="fixed bottom-0 left-0 w-full progress-track z-50"><div id="progress" class="progress-fill" style="width:0%"></div></div>
+
+    <section class="slide active">
+        <div class="anim logo-box mb-10"><i data-lucide="message-square-dashed" class="text-blue-600" width="48" height="48"></i></div>
+        <div class="max-w-4xl text-center">
+            <div class="anim d1 badge bg-blue-50 text-blue-700 mb-6 shadow-sm">Masterclass Débutants</div>
+            <h1 class="anim d2 text-5xl md:text-7xl font-black tracking-tight leading-none mb-6 text-slate-900">
+                L'IA n'est pas magique.<br><span class="text-blue-600">Elle est logique.</span>
+            </h1>
+            <p class="anim d3 text-xl text-slate-500 font-medium max-w-2xl mx-auto mt-6 leading-relaxed">
+                Arrêtez de parler à ChatGPT comme à un humain.<br>Apprenez à lui donner des <span class="bg-white px-3 py-1 rounded-lg shadow-sm text-slate-800 mx-1 font-bold">instructions directes</span> pour diviser votre temps de travail par deux.
+            </p>
+        </div>
+    </section>
+
+    <section class="slide">
+        <div class="max-w-6xl w-full">
+            <h2 class="anim d1 text-4xl font-bold mb-10 text-center text-slate-900">Le Programme du Jour</h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="anim d2 glass p-5"><div class="text-slate-400 font-black text-xl mb-1">M1</div><h3 class="font-bold text-md mb-1 text-slate-800">Démystifier l'IA</h3><p class="text-[11px] text-slate-600">Le mythe de l'intelligence vs la réalité.</p></div>
+                <div class="anim d3 glass p-5"><div class="text-blue-500 font-black text-xl mb-1">M2</div><h3 class="font-bold text-md mb-1 text-slate-800">L'Erreur Fatale</h3><p class="text-[11px] text-slate-600">Pourquoi le mode "Chat" donne de mauvais résultats.</p></div>
+                <div class="anim d4 glass-strong p-5 shadow-lg transform scale-105"><div class="text-indigo-500 font-black text-xl mb-1">M3</div><h3 class="font-bold text-md mb-1 text-slate-800">La Formule R.O.C.F</h3><p class="text-[11px] text-slate-600">Le framework pour construire l'ordre parfait.</p></div>
+                <div class="anim d5 glass p-5"><div class="text-cyan-500 font-black text-xl mb-1">M4</div><h3 class="font-bold text-md mb-1 text-slate-800">Mots Magiques</h3><p class="text-[11px] text-slate-600">Fini la politesse, place aux verbes d'action.</p></div>
+                <div class="anim d6 glass p-5"><div class="text-emerald-500 font-black text-xl mb-1">M5</div><h3 class="font-bold text-md mb-1 text-slate-800">Le Danger</h3><p class="text-[11px] text-slate-600">Pourquoi l'IA ment (Hallucination).</p></div>
+                <div class="anim d6 glass p-5"><div class="text-amber-500 font-black text-xl mb-1">M6</div><h3 class="font-bold text-md mb-1 text-slate-800">Sécurité & RGPD</h3><p class="text-[11px] text-slate-600">Ce qu'il ne faut JAMAIS écrire.</p></div>
+                <div class="anim d6 glass p-5"><div class="text-rose-500 font-black text-xl mb-1">M7</div><h3 class="font-bold text-md mb-1 text-slate-800">Cas Pratiques</h3><p class="text-[11px] text-slate-600">Emails, synthèses, idéation.</p></div>
+                <div class="anim d6 glass p-5 bg-blue-50/50"><div class="text-blue-700 font-black text-xl mb-1">M8</div><h3 class="font-bold text-md mb-1 text-slate-800">Le Grand Quiz</h3><p class="text-[11px] text-slate-600">Testez vos nouveaux réflexes en direct.</p></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide">
+        <div class="max-w-5xl w-full text-center">
+            <div class="anim d1 badge bg-slate-200 text-slate-700 mb-4">Module 1 : Démystifier l'IA</div>
+            <h2 class="anim d2 text-4xl font-bold mb-10 text-slate-900">L'IA n'est pas un humain.</h2>
+            <div class="grid md:grid-cols-2 gap-8 items-center text-left max-w-4xl mx-auto">
+                <div class="anim d3 glass p-8 opacity-70">
+                    <i data-lucide="brain" class="text-red-400 mb-4" width="40" height="40"></i>
+                    <h3 class="font-bold text-xl mb-2 text-slate-800">L'Illusion</h3>
+                    <p class="text-sm text-slate-600">On a l'impression qu'elle "réfléchit", qu'elle a des opinions ou qu'elle comprend nos sentiments parce qu'elle parle très bien français.</p>
+                </div>
+                <div class="anim d4 glass-strong p-8 shadow-xl relative overflow-hidden">
+                    <div class="absolute top-0 right-0 bg-blue-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg">LA RÉALITÉ</div>
+                    <i data-lucide="calculator" class="text-blue-600 mb-4" width="40" height="40"></i>
+                    <h3 class="font-bold text-xl mb-2 text-slate-800">Le Calculateur (Perroquet)</h3>
+                    <p class="text-sm text-slate-600 mb-4">C'est une machine statistique. Elle a lu tout internet, et son seul but est de <strong>deviner le mot suivant le plus probable</strong>.</p>
+                    <div class="bg-slate-100 p-3 rounded-lg text-xs font-mono text-slate-500 text-center shadow-inner">
+                        "Le ciel est..." ➔ [Bleu : 99%]
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide">
+        <div class="max-w-5xl w-full text-center">
+            <h2 class="anim d1 text-4xl font-bold mb-10 text-slate-900">L'allégorie du Super-Stagiaire</h2>
+            <div class="anim d2 glass-strong p-10 max-w-4xl flex flex-col md:flex-row items-center gap-10 w-full shadow-lg mx-auto">
+                <div class="w-1/3 text-center">
+                    <div class="w-32 h-32 bg-blue-50 rounded-full mx-auto flex items-center justify-center mb-4 shadow-inner">
+                        <i data-lucide="user" size="64" class="text-blue-400"></i>
+                    </div>
+                    <h3 class="font-bold text-xl text-slate-800">Le Stagiaire</h3>
+                </div>
+                <div class="w-2/3 text-left">
+                    <p class="text-lg text-slate-700 leading-relaxed mb-6 font-medium">Voyez l'IA comme un stagiaire surdoué qui arrive pour son <strong>tout premier jour</strong> dans votre entreprise.</p>
+                    <ul class="space-y-4 text-slate-600 text-sm">
+                        <li class="flex items-center gap-3"><div class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0"><i data-lucide="zap" size="14"></i></div> Il tape à la vitesse de la lumière.</li>
+                        <li class="flex items-center gap-3"><div class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0"><i data-lucide="languages" size="14"></i></div> Il parle parfaitement 50 langues.</li>
+                        <li class="flex items-center gap-3 font-bold text-red-500"><div class="w-6 h-6 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0"><i data-lucide="x" size="14"></i></div> <strong>Mais il ne connaît NI vos clients, NI votre contexte.</strong></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide">
+        <div class="max-w-5xl w-full text-center">
+            <h2 class="anim d1 text-4xl font-bold mb-10 text-slate-900">L'IA n'a pas de conscience métier</h2>
+            <div class="anim d2 glass p-10 max-w-3xl mx-auto shadow-md text-left">
+                <i data-lucide="briefcase" class="text-slate-400 mb-4" width="40" height="40"></i>
+                <p class="text-lg text-slate-600 leading-relaxed">
+                    Si vous lui demandez de "faire un bon email", sa définition d'un "bon email" n'est pas la vôtre. Elle va faire une moyenne de tous les emails d'internet (souvent ennuyeux et longs). <br><br><strong>C'est à vous de la diriger.</strong>
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide">
+        <div class="max-w-5xl w-full text-center">
+            <div class="anim d1 badge bg-red-50 text-red-600 mb-4">Module 2 : L'Erreur Commune</div>
+            <h2 class="anim d2 text-4xl font-bold mb-10 text-slate-900">L'erreur classique du Lundi matin</h2>
+            <div class="anim d3 w-full max-w-3xl mx-auto text-left">
+                <div class="chat-bubble mb-6 relative">
+                    <span class="absolute -top-3 left-6 bg-red-100 text-red-700 text-[10px] font-bold px-3 py-1 rounded-full shadow-sm uppercase tracking-widest">Votre question (Trop vague)</span>
+                    "Fais-moi un petit point sur nos ventes en Italie stp."
+                </div>
+                <div class="chat-bubble-ai mb-6 relative mt-8">
+                    <span class="absolute -top-3 right-6 bg-blue-100 text-blue-700 text-[10px] font-bold px-3 py-1 rounded-full shadow-sm uppercase tracking-widest">Ce que répond l'IA</span>
+                    "Le marché italien est très dynamique en Europe. Historiquement, les ventes en Italie dépendent de la saisonnalité. Si vous vendez des produits, il est important de..."
+                </div>
+                <div class="glass-strong p-6 text-center text-red-600 font-bold text-sm shadow-md">
+                    L'IA ne lit pas dans vos pensées. Quelle période ? Quel fichier ? Quel produit ?
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide">
+        <div class="max-w-5xl w-full text-center">
+            <h2 class="anim d1 text-4xl font-bold mb-8 text-slate-900">C'est quoi un "Prompt" ?</h2>
+            <p class="anim d2 text-slate-600 mb-10 max-w-2xl mx-auto text-lg">
+                Le mot "Prompt" (Invite de commande) vient de l'informatique. C'est simplement <strong>l'instruction</strong> que vous donnez à l'IA.
+            </p>
+            <div class="anim d3 glass-strong p-10 max-w-4xl mx-auto shadow-xl text-left flex items-center gap-8 bg-blue-50/30">
+                <div class="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center shrink-0 shadow-inner">
+                    <i data-lucide="terminal" width="32" height="32"></i>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-2">Pensez comme un programmeur</h3>
+                    <p class="text-sm text-slate-600 leading-relaxed">
+                        Le français est devenu le nouveau langage de programmation. <br>Quand vous écrivez un prompt, vous ne discutez pas : <strong>vous configurez un logiciel</strong> pour qu'il accomplisse une tâche précise. Plus l'ordre est clair, plus le résultat est parfait.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide">
+        <div class="max-w-5xl w-full text-center">
+            <h2 class="anim d1 text-4xl font-bold mb-10 text-slate-900">Le Chat vs L'Ingénierie</h2>
+            <div class="grid md:grid-cols-2 gap-8 text-left max-w-4xl mx-auto">
+                <div class="anim d2 glass p-8 opacity-60">
+                    <h3 class="text-xl font-bold text-slate-800 mb-4">Le Mode Chat (Amateur)</h3>
+                    <p class="text-sm text-slate-600 mb-4">"Tu peux m'écrire un post LinkedIn sur mon nouveau produit ?"</p>
+                    <div class="bg-red-50 p-3 rounded text-xs text-red-800 font-bold">Résultat : Générique, plat, plein d'emojis ringards.</div>
+                </div>
+                <div class="anim d3 glass-strong p-8 shadow-lg transform scale-105">
+                    <h3 class="text-xl font-bold text-blue-800 mb-4">Le Mode Ingénieur (Pro)</h3>
+                    <p class="text-sm text-slate-700 mb-4">"Rôle: Expert Marketing. Objectif: Écris un post sur le Produit X. Ton: Provocateur. Format: Paragraphes courts, 1 seul emoji."</p>
+                    <div class="bg-emerald-50 p-3 rounded text-xs text-emerald-800 font-bold">Résultat : Impactant, prêt à publier.</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide">
+        <div class="max-w-5xl w-full text-center">
+            <div class="anim d1 badge bg-blue-100 text-blue-700 mb-4">Module 3 : La Formule</div>
+            <h2 class="anim d2 text-5xl font-bold mb-6 text-slate-900">Le standard Pro : <span class="text-blue-600">R.O.C.F.</span></h2>
+            <p class="anim d3 text-center text-slate-500 mb-10">La checklist mentale obligatoire avant d'appuyer sur la touche "Entrée".</p>
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6 w-full max-w-5xl text-left">
+                <div class="anim d4 glass p-6 shadow-sm hover:shadow-md transition-shadow">
+                    <div class="text-3xl mb-4">🎭</div>
+                    <h3 class="font-bold text-lg mb-2 text-slate-800">Rôle</h3>
+                    <p class="text-xs text-slate-500">"Tu es Directeur..."</p>
+                </div>
+                <div class="anim d5 glass p-6 shadow-sm hover:shadow-md transition-shadow">
+                    <div class="text-3xl mb-4">🎯</div>
+                    <h3 class="font-bold text-lg mb-2 text-slate-800">Objectif</h3>
+                    <p class="text-xs text-slate-500">"Compare les chiffres..."</p>
+                </div>
+                <div class="anim d6 glass p-6 shadow-sm hover:shadow-md transition-shadow">
+                    <div class="text-3xl mb-4">📚</div>
+                    <h3 class="font-bold text-lg mb-2 text-slate-800">Contexte</h3>
+                    <p class="text-xs text-slate-500">"On a baissé nos prix..."</p>
+                </div>
+                <div class="anim d6 glass-strong p-6 shadow-lg transform scale-105">
+                    <div class="text-3xl mb-4">📋</div>
+                    <h3 class="font-bold text-lg mb-2 text-blue-800">Format</h3>
+                    <p class="text-xs text-slate-500 font-bold">"Fais un tableau."</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide">
+        <div class="max-w-5xl w-full text-center">
+            <div class="anim d1 badge bg-slate-800 text-white mb-4">R.O.C.F - Pilier 1</div>
+            <h2 class="anim d2 text-4xl font-bold mb-8 text-slate-900">Le Rôle (Le Persona)</h2>
+            <p class="anim d3 text-slate-600 mb-8 max-w-2xl mx-auto">Si vous ne donnez pas de rôle à ChatGPT, il prendra le rôle par défaut d'un "Assistant IA" générique et lisse. Forcez-le à chausser une casquette d'expert.</p>
+            
+            <div class="grid md:grid-cols-2 gap-8 w-full max-w-4xl mx-auto text-left">
+                <div class="anim d4 glass p-8 opacity-70">
+                    <h3 class="font-bold text-slate-400 mb-4 text-sm uppercase tracking-wider">Sans Rôle</h3>
+                    <div class="bg-white p-4 rounded-xl text-sm italic text-slate-600 shadow-sm">"Écris un mail pour relancer ce client qui ne répond pas."</div>
+                    <p class="text-xs text-slate-500 mt-4">Résultat : L'IA écrit un mail très scolaire, formel, qui ressemble au service client d'une administration.</p>
+                </div>
+                <div class="anim d5 glass-strong p-8 shadow-xl">
+                    <h3 class="font-bold text-blue-600 mb-4 text-sm uppercase tracking-wider flex items-center gap-2"><i data-lucide="check-circle" size="16"></i> Le mode Expert</h3>
+                    <div class="bg-blue-50 p-4 rounded-xl text-sm font-medium text-blue-900 shadow-inner">"<b>Tu es un Commercial B2B avec 10 ans d'expérience.</b> Ton ton est direct, orienté business. Rédige une relance."</div>
+                    <p class="text-xs text-slate-700 mt-4 font-bold">Résultat : L'IA change son vocabulaire, va droit au but et utilise les codes de la vente.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide">
+        <div class="max-w-5xl w-full text-center">
+            <h2 class="anim d1 text-4xl font-bold mb-8 text-slate-900">Le Rôle change tout le résultat</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-left max-w-5xl mx-auto">
+                <div class="anim d2 glass p-6">
+                    <div class="w-10 h-10 bg-slate-100 text-slate-600 rounded-full flex items-center justify-center mb-3"><i data-lucide="edit-3"></i></div>
+                    <h4 class="font-bold text-sm mb-2">Le Rédacteur</h4>
+                    <p class="text-xs text-slate-500 italic">"Tu es Rédacteur Web. Fais des phrases courtes, du storytelling et capte l'attention."</p>
+                </div>
+                <div class="anim d3 glass p-6">
+                    <div class="w-10 h-10 bg-slate-100 text-slate-600 rounded-full flex items-center justify-center mb-3"><i data-lucide="bar-chart-2"></i></div>
+                    <h4 class="font-bold text-sm mb-2">L'Analyste</h4>
+                    <p class="text-xs text-slate-500 italic">"Tu es Data Analyst. Sois froid, mathématique, ne fais aucune phrase d'introduction."</p>
+                </div>
+                <div class="anim d4 glass p-6">
+                    <div class="w-10 h-10 bg-slate-100 text-slate-600 rounded-full flex items-center justify-center mb-3"><i data-lucide="graduation-cap"></i></div>
+                    <h4 class="font-bold text-sm mb-2">Le Pédagogue</h4>
+                    <p class="text-xs text-slate-500 italic">"Tu es Professeur. Explique les concepts complexes avec des analogies de la vie de tous les jours."</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide">
+        <div class="max-w-5xl w-full text-center">
+            <div class="anim d1 badge bg-slate-800 text-white mb-4">R.O.C.F - Pilier 2</div>
+            <h2 class="anim d2 text-4xl font-bold mb-8 text-slate-900">L'Objectif (Le Verbe d'Action)</h2>
+            <div class="anim d3 glass-strong p-10 max-w-3xl mx-auto shadow-lg text-left">
+                <h3 class="text-xl font-bold text-slate-800 mb-6 flex items-center gap-3"><i data-lucide="target" class="text-red-500"></i> Soyez impératif</h3>
+                <p class="text-sm text-slate-600 mb-6 leading-relaxed">
+                    Bannissez le verbe "Faire" (trop flou). Utilisez des verbes d'action précis. L'IA est une machine, elle adore les ordres directs.
+                </p>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-red-50 p-4 rounded-xl border-none">
+                        <p class="text-xs font-bold text-red-400 uppercase mb-2">Faible</p>
+                        <ul class="text-sm text-red-800 space-y-2">
+                            <li>Fais un résumé...</li>
+                            <li>Regarde ce texte...</li>
+                            <li>Aide-moi à écrire...</li>
+                        </ul>
+                    </div>
+                    <div class="bg-emerald-50 p-4 rounded-xl border-none shadow-sm">
+                        <p class="text-xs font-bold text-emerald-500 uppercase mb-2">Puissant</p>
+                        <ul class="text-sm text-emerald-900 space-y-2 font-bold">
+                            <li>Extrais les 3 idées...</li>
+                            <li>Analyse les failles...</li>
+                            <li>Rédige un brouillon...</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide">
+        <div class="max-w-5xl w-full text-center">
+            <div class="anim d1 badge bg-slate-800 text-white mb-4">R.O.C.F - Pilier 3</div>
+            <h2 class="anim d2 text-4xl font-bold mb-8 text-slate-900">Le Contexte (Les Limites)</h2>
+            <p class="anim d3 text-slate-600 mb-8 max-w-3xl mx-auto">C'est ici que vous donnez de la "mémoire" au super-stagiaire pour qu'il ne fasse pas de hors-sujet.</p>
+            
+            <div class="anim d4 glass p-8 max-w-4xl mx-auto text-left shadow-md">
+                <div class="flex flex-wrap gap-3 mb-6">
+                    <span class="bg-slate-100 px-3 py-1 rounded-full text-xs font-bold text-slate-600">Pour qui ?</span>
+                    <span class="bg-slate-100 px-3 py-1 rounded-full text-xs font-bold text-slate-600">Quelles données ?</span>
+                    <span class="bg-slate-100 px-3 py-1 rounded-full text-xs font-bold text-slate-600">Quel historique ?</span>
+                </div>
+                <div class="bg-white p-5 rounded-xl text-sm text-slate-700 italic shadow-sm relative overflow-hidden">
+                    <div class="absolute left-0 top-0 w-1 h-full bg-indigo-500"></div>
+                    "Ce mail s'adresse au Directeur Achat d'un grand groupe. Il nous a refusé il y a 6 mois car nous étions trop chers. L'objectif est de lui présenter notre nouvelle offre allégée (Pièce-jointe ci-dessous)."
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide">
+        <div class="max-w-5xl w-full text-center">
+            <h2 class="anim d1 text-4xl font-bold mb-8 text-slate-900">La règle du copier-coller</h2>
+            <div class="anim d2 glass-strong p-10 max-w-3xl mx-auto text-left shadow-xl flex items-center gap-8">
+                <div class="w-20 h-20 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center shrink-0">
+                    <i data-lucide="copy" width="32" height="32"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-slate-800 mb-2">Donnez-lui la matière première</h3>
+                    <p class="text-sm text-slate-600 leading-relaxed mb-4">
+                        Ne demandez pas à l'IA d'inventer de l'information. Copiez le contenu de vos emails, de vos PDF ou de vos notes, collez-les à la fin du prompt, et dites : <br><strong>"Base-toi sur le texte ci-dessous pour rédiger."</strong>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide">
+        <div class="max-w-5xl w-full text-center">
+            <div class="anim d1 badge bg-slate-800 text-white mb-4">R.O.C.F - Pilier 4</div>
+            <h2 class="anim d2 text-4xl font-bold mb-8 text-slate-900">Le Format (Le résultat final)</h2>
+            <p class="anim d3 text-slate-600 mb-10 max-w-2xl mx-auto">
+                Ne lisez plus, <strong>exploitez</strong>. Si vous ne précisez pas le format, l'IA écrira de longs paragraphes ennuyeux.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl text-left">
+                <div class="anim d4 glass p-6 shadow-sm">
+                    <div class="w-12 h-12 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mb-4"><i data-lucide="table"></i></div>
+                    <h3 class="font-bold text-sm mb-2 text-slate-800">Le Tableau</h3>
+                    <p class="text-xs text-slate-500 mb-2">Génial pour comparer. L'IA sait créer des tableaux copiables dans Excel.</p>
+                    <div class="bg-slate-50 p-2 rounded text-[10px] font-mono text-slate-600 border border-slate-100">"Sous forme de tableau à 3 colonnes : Date, Client, Montant."</div>
+                </div>
+                <div class="anim d5 glass p-6 shadow-sm">
+                    <div class="w-12 h-12 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mb-4"><i data-lucide="list-checks"></i></div>
+                    <h3 class="font-bold text-sm mb-2 text-slate-800">Les Puces (Bullets)</h3>
+                    <p class="text-xs text-slate-500 mb-2">Pour des synthèses rapides à lire sur mobile.</p>
+                    <div class="bg-slate-50 p-2 rounded text-[10px] font-mono text-slate-600 border border-slate-100">"En 3 bullet points maximum. Aucune phrase d'intro."</div>
+                </div>
+                <div class="anim d6 glass-strong p-6 shadow-lg transform scale-105">
+                    <div class="w-12 h-12 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mb-4"><i data-lucide="mail"></i></div>
+                    <h3 class="font-bold text-sm mb-2 text-slate-800">Le Prêt-à-l'emploi</h3>
+                    <p class="text-xs text-slate-500 mb-2">Pour éviter de devoir tout réécrire.</p>
+                    <div class="bg-amber-50 p-2 rounded text-[10px] font-mono text-amber-800 border border-amber-100">"Uniquement l'objet et le corps du mail, prêt à copier-coller."</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide">
+        <h2 class="anim d1 text-center text-3xl font-bold mb-6">Tutoriel : Construire le Prompt Parfait</h2>
+        <p class="anim d2 text-center text-slate-500 mb-8">Cliquez sur les étapes (R.O.C.F) pour voir la magie opérer.</p>
+        
+        <div class="anim d3 glass-strong p-0 w-full max-w-5xl flex flex-col md:flex-row h-96 overflow-hidden shadow-xl">
+            <div class="w-full md:w-1/3 bg-slate-50 p-6 flex flex-col gap-3">
+                <button class="builder-step active quiz-option font-bold text-sm" onclick="buildPrompt(1, this)"><span class="text-slate-400 font-black">R</span> Rôle</button>
+                <button class="builder-step quiz-option font-bold text-sm" onclick="buildPrompt(2, this)"><span class="text-slate-400 font-black">O</span> Objectif</button>
+                <button class="builder-step quiz-option font-bold text-sm" onclick="buildPrompt(3, this)"><span class="text-slate-400 font-black">C</span> Contexte</button>
+                <button class="builder-step quiz-option font-bold text-sm" onclick="buildPrompt(4, this)"><span class="text-slate-400 font-black">F</span> Format</button>
+            </div>
+            <div class="w-full md:w-2/3 bg-white p-8 flex flex-col justify-center relative text-left">
+                <div class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Votre Prompt final :</div>
+                <div id="builder-output" class="text-sm text-slate-700 leading-relaxed font-medium space-y-4">
+                    <span id="bp-r" class="block transition-all duration-500 text-blue-800 bg-blue-50 p-3 rounded-xl shadow-sm">"Tu es un Assistant RH expérimenté."</span>
+                    <span id="bp-o" class="block transition-all duration-500 opacity-0 translate-y-4 text-emerald-800 bg-emerald-50 p-3 rounded-xl shadow-sm">"Rédige une offre d'emploi pour un poste de développeur."</span>
+                    <span id="bp-c" class="block transition-all duration-500 opacity-0 translate-y-4 text-amber-800 bg-amber-50 p-3 rounded-xl shadow-sm">"C'est pour une startup dynamique à Paris. Salaire : 50k. Télétravail 2j/semaine."</span>
+                    <span id="bp-f" class="block transition-all duration-500 opacity-0 translate-y-4 text-purple-800 bg-purple-50 p-3 rounded-xl shadow-sm">"Structure l'offre avec des titres clairs (Missions, Profil) et utilise des bullet points."</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide">
+        <div class="max-w-5xl w-full text-center">
+            <div class="anim d1 badge bg-cyan-50 text-cyan-700 mb-4">Module 4 : Les Mots Magiques</div>
+            <h2 class="anim d2 text-4xl font-bold mb-8 text-slate-900">La Clarté avant la Politesse</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-left max-w-4xl mx-auto">
+                <div class="anim d3 glass p-8 opacity-80 border-t-4 border-red-400">
+                    <div class="text-xs font-bold text-red-500 uppercase mb-4 flex items-center gap-2"><i data-lucide="x-circle" width="16"></i> Mots parasites</div>
+                    <p class="text-sm text-slate-600 mb-4">L'IA n'a pas de sentiments. Dire "Bonjour", "S'il te plaît" ou "Merci d'avance" dilue votre instruction principale et embrouille l'IA.</p>
+                    <div class="bg-red-50 p-2 rounded text-[10px] text-red-800 italic">"Bonjour ChatGPT, pourrais-tu m'aider stp..."</div>
+                </div>
+                <div class="anim d4 glass-strong p-8 shadow-lg border-t-4 border-emerald-500">
+                    <div class="text-xs font-bold text-emerald-600 uppercase mb-4 flex items-center gap-2"><i data-lucide="check-circle" width="16"></i> Le mode "Robo-boss"</div>
+                    <p class="text-sm text-slate-700 mb-4">Donnez des ordres stricts, comme à une machine. Utilisez l'impératif.</p>
+                    <div class="bg-emerald-50 p-2 rounded text-[10px] text-emerald-900 font-bold">"Analyse ce texte. Sors les 3 erreurs principales."</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide">
+        <div class="max-w-5xl w-full text-center">
+            <h2 class="anim d1 text-4xl font-bold mb-8 text-slate-900">La phrase de "Déblocage"</h2>
+            <div class="anim d2 glass-strong p-10 max-w-4xl mx-auto shadow-xl flex items-center gap-8 text-left">
+                <div class="text-5xl shrink-0">🤔</div>
+                <div>
+                    <h3 class="font-bold text-xl text-slate-800 mb-2">Pour tout ce qui est calcul ou réflexion :</h3>
+                    <div class="bg-slate-900 text-green-400 p-4 rounded-xl font-mono text-sm shadow-inner mb-4 inline-block">
+                        "Réfléchis étape par étape avant de répondre."
+                    </div>
+                    <p class="text-sm text-slate-600 leading-relaxed">
+                        L'IA essaie souvent de deviner la réponse finale tout de suite et se trompe dans ses calculs. En ajoutant cette phrase à la fin de votre prompt, vous la forcez à <strong>écrire son brouillon</strong> sous vos yeux. Les erreurs chutent de 80%.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide">
+        <div class="max-w-5xl w-full text-center">
+            <h2 class="anim d1 text-4xl font-bold mb-8 text-slate-900">La Puissance de l'Exemple</h2>
+            <p class="anim d2 text-slate-600 mb-8 max-w-3xl mx-auto text-lg">Si vous voulez un format très précis, ne le décrivez pas avec de longues phrases complexes. <strong>Montrez-le.</strong></p>
+            
+            <div class="anim d3 glass-strong p-8 text-left max-w-3xl mx-auto shadow-md rounded-2xl bg-blue-50/30">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-200 pb-2">Dans votre prompt, ajoutez simplement :</p>
+                <div class="font-mono text-sm text-slate-700 leading-relaxed bg-white p-4 rounded-xl shadow-sm">
+                    Voici comment tu dois répondre (Exemple) :<br><br>
+                    <span class="text-blue-600 font-bold">Texte :</span> Je veux annuler.<br>
+                    <span class="text-emerald-600 font-bold">Catégorie :</span> SAV<br><br>
+                    <span class="text-blue-600 font-bold">Texte :</span> [Votre vrai texte à analyser]<br>
+                    <span class="text-emerald-600 font-bold">Catégorie :</span>
+                </div>
+            </div>
+            <p class="anim d4 text-xs font-bold text-slate-500 mt-6">L'IA est une machine à copier des "motifs". Elle complétera parfaitement.</p>
+        </div>
+    </section>
+
+    <section class="slide">
+        <div class="max-w-5xl w-full text-center">
+            <h2 class="anim d1 text-4xl font-bold mb-8 text-slate-900">Ne demandez pas tout d'un coup</h2>
+            <p class="anim d2 text-slate-600 mb-10 max-w-2xl mx-auto text-lg">Le Séquençage : Découpez les tâches complexes en plusieurs prompts.</p>
+            
+            <div class="anim d3 flex flex-col md:flex-row items-center justify-center gap-4 w-full max-w-4xl mx-auto">
+                <div class="glass p-6 w-1/3 text-center shadow-sm">
+                    <div class="w-20 h-20 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3 font-bold text-sm">Prompt 1</div>
+                    <h4 class="font-bold text-sm text-slate-800">Extraire</h4>
+                    <p class="text-xs text-slate-500 mt-1">"Sors les infos clés de ce long texte."</p>
+                </div>
+                <i data-lucide="arrow-right" class="text-slate-300"></i>
+                <div class="glass p-6 w-1/3 text-center shadow-sm">
+                    <div class="w-20 h-20 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-3 font-bold text-sm">Humain</div>
+                    <h4 class="font-bold text-sm text-slate-800">Valider</h4>
+                    <p class="text-xs text-slate-500 mt-1">Vous lisez et validez les infos.</p>
+                </div>
+                <i data-lucide="arrow-right" class="text-slate-300"></i>
+                <div class="glass-strong p-6 w-1/3 text-center shadow-lg border-b-4 border-emerald-500">
+                    <div class="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3 font-bold text-sm">Prompt 2</div>
+                    <h4 class="font-bold text-sm text-slate-800">Rédiger</h4>
+                    <p class="text-xs text-slate-500 mt-1">"Utilise ces infos pour faire le mail."</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide">
+        <div class="max-w-5xl w-full text-center">
+            <div class="anim d1 badge bg-red-50 text-red-600 mb-4">Module 5 : Le Danger</div>
+            <h2 class="anim d2 text-4xl font-bold mb-10 text-slate-900">Pourquoi l'IA "ment"-elle ?</h2>
+            <div class="anim d3 glass p-10 max-w-4xl flex items-center gap-8 mx-auto shadow-md text-left">
+                <div class="w-24 h-24 bg-red-100 text-red-600 rounded-full flex items-center justify-center shrink-0">
+                    <i data-lucide="brain-circuit" width="40" height="40"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-xl text-slate-800 mb-2">L'Hallucination</h3>
+                    <p class="text-sm text-slate-600 leading-relaxed mb-4">
+                        Rappelez-vous : L'IA est un stagiaire voulant bien faire qui "devine" le mot suivant. Si vous lui demandez "Pourquoi nos ventes ont baissé ?", et qu'elle n'a pas vos données... <strong>elle va inventer des raisons plausibles</strong> (ex: l'inflation) pour vous satisfaire.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide">
+        <div class="max-w-5xl w-full text-center">
+            <h2 class="anim d1 text-4xl font-bold mb-8 text-slate-900">Le Remède : L'Ancrage</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-left max-w-4xl mx-auto">
+                <div class="anim d2 glass p-8">
+                    <h3 class="font-bold text-lg text-slate-800 mb-2">1. Fournir la source</h3>
+                    <p class="text-sm text-slate-600 mb-4">Ne laissez jamais l'IA répondre avec sa mémoire générale. Copiez-collez toujours le texte, le rapport ou les notes de réunion directement dans le prompt.</p>
+                </div>
+                <div class="anim d3 glass-strong p-8 shadow-lg border-t-4 border-emerald-500">
+                    <h3 class="font-bold text-lg text-emerald-800 mb-2">2. Le Droit à l'échec</h3>
+                    <p class="text-sm text-slate-600 mb-4">Ajoutez cette phrase bouclier vitale pour l'empêcher d'inventer :</p>
+                    <div class="bg-emerald-50 p-3 rounded text-xs font-bold text-emerald-900 shadow-inner">
+                        "Base-toi UNIQUEMENT sur le texte fourni. Si la réponse n'y figure pas, réponds 'Je ne sais pas'."
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide">
+        <div class="max-w-5xl w-full text-center">
+            <h2 class="anim d1 text-4xl font-bold mb-8 text-slate-900">Le syndrome de l'Amnésie</h2>
+            <div class="anim d2 glass p-10 max-w-4xl text-center shadow-md mx-auto">
+                <p class="text-base text-slate-600 mb-8">Quand vous collez un texte très long (ex: 10 pages), l'IA retient bien le début, retient bien la fin, mais oublie très souvent ce qu'il y a au milieu.</p>
+                
+                <div class="flex w-full h-10 rounded-xl overflow-hidden mb-6 text-white font-bold text-xs shadow-sm">
+                    <div class="w-1/4 bg-emerald-500 flex items-center justify-center">Lu & Retenu</div>
+                    <div class="w-2/4 bg-red-400 flex items-center justify-center">Oublié / Ignoré</div>
+                    <div class="w-1/4 bg-emerald-500 flex items-center justify-center">Lu & Retenu</div>
+                </div>
+                
+                <div class="bg-blue-50 p-4 rounded-xl text-left border border-blue-100">
+                    <p class="text-sm text-blue-800 font-bold">La solution : L'Ordre des consignes.</p>
+                    <p class="text-xs text-blue-700 mt-1">Placez toujours votre instruction d'action ("Fais un tableau avec ces infos") <strong>TOUT À LA FIN</strong> de votre prompt, après le texte collé.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide">
+        <div class="max-w-5xl w-full text-center">
+            <div class="anim d1 badge bg-amber-100 text-amber-700 mb-4">Module 6 : Sécurité & RGPD</div>
+            <h2 class="anim d2 text-4xl font-bold mb-8 text-slate-900">La Règle d'Or de la Confidentialité</h2>
+            <div class="anim d3 glass-strong p-10 max-w-3xl mx-auto text-center shadow-2xl">
+                <div class="inline-flex items-center justify-center w-20 h-20 bg-amber-100 text-amber-600 rounded-full mb-6 shadow-inner">
+                    <i data-lucide="shield-alert" width="40" height="40"></i>
+                </div>
+                <h3 class="font-black text-2xl text-slate-800 mb-4">L'IA (publique) retient ce qu'elle lit.</h3>
+                <p class="text-slate-600 text-base mb-6 font-medium">
+                    Ce que vous tapez dans ChatGPT standard peut servir à entraîner les futurs modèles. Ne collez JAMAIS de contrats, de bilans comptables non-publiés, ou de données personnelles (Noms, Emails).
+                </p>
+                <div class="bg-slate-50 p-4 rounded-xl text-left border border-slate-200">
+                    <h4 class="font-bold text-slate-800 text-sm mb-1">Le Réflexe (Anonymisation) :</h4>
+                    <p class="text-xs text-slate-500">Remplacez <em>"Bilan de Jean Dupont : 5M€"</em> par <em>"Bilan de Monsieur X"</em>. L'IA analysera le texte tout aussi bien sans le vrai nom.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide">
+        <div class="max-w-5xl w-full text-center content-scroll pb-10">
+            <div class="anim d1 badge bg-purple-50 text-purple-700 mb-4 mt-8">Module 7 : Cas Pratiques</div>
+            <h2 class="anim d2 text-4xl font-bold mb-8 text-slate-900">Cas #1 : La Synthèse de Réunion</h2>
+            
+            <div class="anim d3 glass-strong p-8 max-w-4xl mx-auto text-left shadow-lg border-l-4 border-purple-500">
+                <p class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">Le Prompt R.O.C.F parfait :</p>
+                <div class="bg-slate-900 text-white p-6 rounded-xl font-mono text-sm leading-relaxed shadow-inner">
+                    <span class="text-blue-400">[Rôle]</span> Tu es un Assistant de Direction ultra-organisé.<br><br>
+                    <span class="text-emerald-400">[Objectif]</span> Rédige le compte-rendu de la réunion ci-dessous en extrayant les décisions clés et les "Next Steps".<br><br>
+                    <span class="text-amber-400">[Contexte]</span> C'était une réunion tendue avec l'équipe Marketing concernant le retard du projet Alpha.<br><br>
+                    <span class="text-purple-400">[Format]</span> Un tableau avec 3 colonnes : "Action / Qui / Quand".<br><br>
+                    [Coller les notes en vrac ici]
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide">
+        <div class="max-w-5xl w-full text-center">
+            <div class="anim d1 badge bg-purple-50 text-purple-700 mb-4">Module 7 : Cas Pratiques</div>
+            <h2 class="anim d2 text-4xl font-bold mb-8 text-slate-900">Cas #2 : L'Email Difficile (SAV)</h2>
+            
+            <div class="anim d3 glass p-8 max-w-4xl mx-auto text-left border-l-4 border-blue-400 shadow-md">
+                <p class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">Le Prompt R.O.C.F parfait :</p>
+                <div class="bg-slate-50 text-slate-700 p-6 rounded-xl font-mono text-sm leading-relaxed border border-slate-200">
+                    <span class="text-blue-600 font-bold">[Rôle]</span> Tu es Responsable Relation Client.<br><br>
+                    <span class="text-emerald-600 font-bold">[Objectif]</span> Rédige une réponse à cet email client énervé.<br><br>
+                    <span class="text-amber-600 font-bold">[Contexte]</span> Le client a raison, nous avons eu 10 jours de retard. Mais nous ne pouvons pas rembourser, on offre -20% sur la prochaine commande.<br><br>
+                    <span class="text-purple-600 font-bold">[Format]</span> Ton poli, empathique, mais ferme sur le remboursement. Prêt à être envoyé.
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide">
+        <div class="max-w-5xl w-full text-center">
+            <div class="anim d1 badge bg-purple-50 text-purple-700 mb-4">Module 7 : Cas Pratiques</div>
+            <h2 class="anim d2 text-4xl font-bold mb-8 text-slate-900">Cas #3 : Entraînement / Jeu de rôle</h2>
+            <p class="anim d3 text-slate-600 mb-8 max-w-2xl mx-auto">L'IA est excellente pour simuler des situations avant qu'elles n'arrivent.</p>
+            
+            <div class="anim d4 glass-strong p-8 max-w-4xl mx-auto text-left border-t-4 border-emerald-500 shadow-xl">
+                <div class="bg-slate-900 text-green-400 p-6 rounded-xl font-mono text-sm leading-relaxed shadow-inner">
+                    "Tu es le Directeur d'Achat d'une grande banque. Tu es très dur en affaires et tu cherches toujours à baisser les prix.<br><br>
+                    Je suis le commercial qui essaie de te vendre un logiciel. <br>
+                    Jouons la scène de négociation. <br>
+                    Pose-moi une seule objection à la fois et attends ma réponse."
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide">
+        <div class="max-w-5xl w-full text-center">
+            <div class="anim d1 badge bg-purple-50 text-purple-700 mb-4">Module 7 : Cas Pratiques</div>
+            <h2 class="anim d2 text-4xl font-bold mb-8 text-slate-900">Cas #4 : Le Brainstorming (Idéation)</h2>
+            
+            <div class="anim d3 glass p-8 max-w-4xl mx-auto text-left shadow-md">
+                <p class="text-sm text-slate-600 mb-4 font-bold">Pour générer des idées, forcez l'IA à sortir des sentiers battus :</p>
+                <div class="bg-amber-50 text-amber-900 p-6 rounded-xl font-mono text-sm leading-relaxed border border-amber-200">
+                    "Génère 10 idées de noms pour un nouveau produit de nettoyage écologique.<br><br>
+                    Règles : <br>
+                    - Les 3 premières idées doivent être très classiques.<br>
+                    - Les 4 suivantes doivent être modernes et technologiques.<br>
+                    - Les 3 dernières doivent être complètement folles et drôles."
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide">
+        <div class="max-w-5xl w-full text-center">
+            <div class="anim d1 badge bg-purple-50 text-purple-700 mb-4">Module 7 : Cas Pratiques</div>
+            <h2 class="anim d2 text-4xl font-bold mb-8 text-slate-900">Cas #5 : La Vulgarisation</h2>
+            
+            <div class="anim d3 glass-strong p-8 max-w-4xl mx-auto text-left shadow-lg">
+                <p class="text-sm text-slate-600 mb-4 font-bold">Comment comprendre un texte juridique ou technique complexe ?</p>
+                <div class="bg-blue-50 text-blue-900 p-6 rounded-xl font-mono text-sm leading-relaxed">
+                    "Tu es un vulgarisateur expert.<br>
+                    Lis le contrat juridique ci-dessous.<br>
+                    Explique-le comme si j'étais un enfant de 10 ans, en utilisant des analogies simples (comme des Lego ou des bonbons).<br>
+                    Sors uniquement les 3 risques principaux pour moi."
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide">
+        <div class="max-w-5xl w-full text-center">
+            <div class="anim d1 badge bg-purple-50 text-purple-700 mb-4">Module 7 : Cas Pratiques</div>
+            <h2 class="anim d2 text-4xl font-bold mb-8 text-slate-900">Cas #6 : L'Extraction de Données brutes</h2>
+            <p class="anim d3 text-slate-600 mb-8 max-w-2xl mx-auto">Pour préparer un fichier Excel à partir d'un texte non structuré.</p>
+            
+            <div class="anim d4 glass p-8 max-w-4xl mx-auto text-left shadow-md border-l-4 border-slate-800">
+                <div class="bg-slate-900 text-white p-6 rounded-xl font-mono text-sm leading-relaxed">
+                    "Lis le texte ci-dessous contenant des profils de clients.<br>
+                    Extrais les informations sous forme de tableau CSV (séparé par des virgules) pour que je puisse le copier dans Excel.<br>
+                    Colonnes attendues : Nom, Email, Ville, Budget.<br>
+                    S'il manque une info, écris 'N/A'."
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide" id="quiz-intro">
+        <div class="max-w-5xl w-full text-center">
+            <div class="anim d1 badge bg-blue-100 text-blue-700 mb-4">Module 8 : Validation</div>
+            <h2 class="anim d2 text-5xl font-black mb-8 text-slate-900">Êtes-vous devenu un Pro ?</h2>
+            <div class="anim d3 glass-strong p-10 max-w-2xl mx-auto shadow-2xl">
+                <i data-lucide="award" class="mx-auto text-blue-600 mb-6" width="64" height="64"></i>
+                <p class="text-lg text-slate-600 font-medium mb-8">
+                    10 mises en situation de la vie réelle en entreprise.<br>Trouvez le meilleur prompt.
+                </p>
+                <button onclick="nextSlide()" class="px-8 py-4 bg-slate-900 text-white rounded-full font-bold shadow-lg hover:bg-blue-600 transition hover:scale-105 border-none">
+                    Démarrer le Quiz
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide" id="quiz-slide">
+        <div class="w-full max-w-4xl">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-3xl font-bold text-slate-900">Simulateur de Prompt</h2>
+                <div class="badge bg-slate-800 text-white shadow-sm py-1.5 px-3 text-xs border-none">
+                    <span id="quiz-level" class="text-blue-300 mr-2">Q1</span> | 
+                    <span id="quiz-progress" class="text-blue-300 ml-2">1/10</span>
+                </div>
+            </div>
+
+            <div class="glass-strong p-8 relative flex flex-col shadow-2xl border-none">
+                <div class="absolute top-0 left-0 w-full h-1.5 bg-slate-100 rounded-t-xl overflow-hidden">
+                    <div id="quiz-inner-bar" class="h-full bg-blue-500 transition-all duration-300" style="width: 10%"></div>
+                </div>
+
+                <div class="mb-6 mt-2">
+                    <div id="quiz-scenario" class="bg-blue-50/50 p-4 rounded-xl text-slate-700 mb-4 border-none shadow-sm">
+                        <span class="font-bold text-blue-800 block mb-1 text-[10px] uppercase tracking-widest">Mise en situation</span>
+                        <span id="quiz-scenario-text" class="text-sm font-medium">Scénario...</span>
+                    </div>
+                    <h3 id="quiz-question" class="text-xl font-bold text-slate-900 leading-snug">Question...</h3>
+                </div>
+
+                <div id="quiz-options" class="space-y-3 flex-1">
+                    </div>
+
+                <div id="quiz-feedback-container" class="mt-6 p-5 rounded-xl hidden items-start gap-4 shadow-md">
+                    <div id="quiz-feedback-icon" class="shrink-0 mt-1"></div>
+                    <div>
+                        <h4 id="quiz-feedback-title" class="font-bold text-lg mb-1"></h4>
+                        <p id="quiz-feedback-text" class="text-sm font-medium leading-relaxed"></p>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex justify-end">
+                    <button id="quiz-next-btn" onclick="loadNextQuestion()" class="hidden px-8 py-3 bg-slate-900 text-white rounded-full font-bold text-sm hover:bg-blue-600 transition shadow-lg flex items-center gap-2 border-none">
+                        Question Suivante <i data-lucide="arrow-right" size="16"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide">
+        <div class="max-w-4xl text-center">
+            <div class="anim d1 p-5 bg-white/60 rounded-3xl mb-8 backdrop-blur shadow-lg inline-block border-none">
+                <i data-lucide="code-2" class="text-blue-600" width="48" height="48"></i>
+            </div>
+            <h2 class="anim d2 text-5xl font-black mb-6 text-center text-slate-900">Le Prompt est votre Code.</h2>
+            <p class="anim d3 text-xl text-slate-600 mb-12 text-center leading-relaxed max-w-2xl mx-auto">
+                L'IA n'est pas un être humain avec qui discuter, c'est un logiciel surpuissant que vous programmez désormais avec de simples mots (R.O.C.F).
+            </p>
+            <div class="anim d4 flex justify-center gap-4">
+                <button onclick="goToSlide(0)" class="px-10 py-4 bg-slate-900 text-white rounded-full font-bold hover:bg-blue-600 transition flex items-center gap-3 shadow-xl transform hover:scale-105 border-none">
+                    <i data-lucide="rotate-ccw" width="18"></i> Revoir la Masterclass
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <script>
+    (function() {
+        'use strict';
+        lucide.createIcons();
+
+        // ---- SLIDE NAVIGATION ----
+        const slides = document.querySelectorAll('.slide');
+        const counter = document.getElementById('slideCounter');
+        const progress = document.getElementById('progress');
+        // Because the Quiz uses 1 slide dynamically, the "physical" slide count is the total section tags.
+        // We have 33 <section> tags. We can display them as we want.
+        let currentSlideIdx = 0;
+
+        function updateSlide() {
+            slides.forEach((s, i) => s.classList.toggle('active', i === currentSlideIdx));
+            if(counter) counter.innerText = `${String(currentSlideIdx + 1).padStart(2, '0')} / ${slides.length}`;
+            if(progress) progress.style.width = `${((currentSlideIdx + 1) / slides.length) * 100}%`;
+        }
+
+        window.nextSlide = () => { if(currentSlideIdx < slides.length - 1) { currentSlideIdx++; updateSlide(); } };
+        window.prevSlide = () => { if(currentSlideIdx > 0) { currentSlideIdx--; updateSlide(); } };
+        window.goToSlide = (n) => { currentSlideIdx = n; updateSlide(); };
+
+        document.addEventListener('keydown', (e) => {
+            if(e.key === 'ArrowRight' || e.key === ' ') { 
+                if(document.activeElement.tagName !== "INPUT" && document.activeElement.tagName !== "BUTTON") {
+                    e.preventDefault(); nextSlide(); 
+                }
+            }
+            if(e.key === 'ArrowLeft') { 
+                if(document.activeElement.tagName !== "INPUT" && document.activeElement.tagName !== "BUTTON") {
+                    e.preventDefault(); prevSlide(); 
+                }
+            }
+        });
+
+        // ---- BUILDER INTERACTIF (SLIDE 16) ----
+        window.buildPrompt = (step, btn) => {
+            const map = { 1: 'bp-r', 2: 'bp-o', 3: 'bp-c', 4: 'bp-f' };
+            const el = document.getElementById(map[step]);
+            document.querySelectorAll('.builder-step').forEach(b => {
+                b.classList.remove('active');
+                b.style.boxShadow = 'none';
+            });
+            btn.classList.add('active');
+            btn.style.opacity = '1';
+            btn.style.boxShadow = '0 4px 15px rgba(0,0,0,0.1)';
+            el.style.opacity = '1';
+            el.style.transform = 'translateY(0)';
+        };
+
+        // ---- MEGA QUIZ DATA (10 Questions) ----
+        const quizData = [
+            {
+                level: "Q1", scenario: "Rédiger un mail pour un prospect difficile.",
+                question: "Quelle approche donne le rendu le plus professionnel ?",
+                options: [
+                    { text: "Bonjour ChatGPT, pourrais-tu écrire un beau mail stp.", isCorrect: false },
+                    { text: "Tu es un négociateur expert. Rédige un email assertif orienté ROI.", isCorrect: true },
+                    { text: "Écris un mail pour qu'il achète.", isCorrect: false }
+                ],
+                feedback: "Piège ! La politesse (Bonjour/Stp) ne sert à rien à une IA. Définir un [Rôle] modifie radicalement le vocabulaire."
+            },
+            {
+                level: "Q2", scenario: "Comprendre pourquoi les ventes ont chuté.",
+                question: "Quel prompt évite à l'IA d'inventer des données (Hallucination) ?",
+                options: [
+                    { text: "Pourquoi les ventes baissent en France ?", isCorrect: false },
+                    { text: "Base-toi UNIQUEMENT sur ce rapport. Si ce n'est pas dedans, réponds 'Inconnu'.", isCorrect: true },
+                    { text: "Donne-moi 3 raisons plausibles de cette baisse.", isCorrect: false }
+                ],
+                feedback: "Le Grounding (Ancrage) ! Sans consigne stricte, l'IA inventera des raisons (inflation, etc.) pour vous satisfaire."
+            },
+            {
+                level: "Q3", scenario: "Présenter un topo au Directeur.",
+                question: "Comment éviter que l'IA écrive 4 pages de texte indigeste ?",
+                options: [
+                    { text: "Résume en 3 bullet points par pays. Pas d'introduction.", isCorrect: true },
+                    { text: "Fais un résumé détaillé.", isCorrect: false },
+                    { text: "Résume les points importants.", isCorrect: false }
+                ],
+                feedback: "Le mot 'Détaillé' est subjectif. En imposant '3 bullet points', vous prenez le contrôle absolu du Format (Le F de ROCF)."
+            },
+            {
+                level: "Q4", scenario: "Calculer une remise complexe (-15% puis + TVA).",
+                question: "Comment s'assurer que l'IA ne fait pas d'erreur mathématique ?",
+                options: [
+                    { text: "Donne-moi le prix final TTC.", isCorrect: false },
+                    { text: "Combien ça fait en tout ?", isCorrect: false },
+                    { text: "Réfléchis étape par étape : Calcule le total, la remise, puis la TVA.", isCorrect: true }
+                ],
+                feedback: "La phrase magique ! En forçant l'IA à écrire les étapes de son calcul (son brouillon), vous lui donnez de la 'mémoire'."
+            },
+            {
+                level: "Q5", scenario: "Analyser des notes de réunion (RGPD).",
+                question: "Quelle est l'erreur GRAVE à ne pas commettre ?",
+                options: [
+                    { text: "Remplacer les vrais noms par 'Client A'.", isCorrect: false },
+                    { text: "Coller le texte avec les vrais noms et les montants des contrats.", isCorrect: true },
+                    { text: "Retirer les numéros de téléphone.", isCorrect: false }
+                ],
+                feedback: "L'IA publique retient vos données. Anonymisez toujours vos textes sensibles avant de les coller."
+            },
+            {
+                level: "Q6", scenario: "Formater des données d'une manière très spécifique.",
+                question: "Quelle méthode fonctionne à tous les coups ?",
+                options: [
+                    { text: "Lui donner un Exemple exact de ce que vous voulez (Input -> Output).", isCorrect: true },
+                    { text: "Lui écrire un long paragraphe d'explications.", isCorrect: false },
+                    { text: "Écrire la consigne en MAJUSCULES.", isCorrect: false }
+                ],
+                feedback: "L'IA est une machine à reproduire des motifs (Pattern). Lui montrer 1 exemple visuel est surpuissant."
+            },
+            {
+                level: "Q7", scenario: "Vous collez un rapport PDF de 20 pages.",
+                question: "Où devez-vous placer votre instruction la plus importante ?",
+                options: [
+                    { text: "Tout en haut, avant le texte collé.", isCorrect: false },
+                    { text: "Au milieu.", isCorrect: false },
+                    { text: "Tout en bas, APRÈS le texte collé.", isCorrect: true }
+                ],
+                feedback: "L'Amnésie (Lost in the Middle). L'IA oublie souvent le début des longs textes. L'action doit clore le prompt."
+            },
+            {
+                level: "Q8", scenario: "Extraire des données puis rédiger un email avec.",
+                question: "Que se passe-t-il si on demande tout dans le même prompt ?",
+                options: [
+                    { text: "Rien, l'IA gère le multi-tâche parfaitement.", isCorrect: false },
+                    { text: "L'IA risque d'oublier des consignes. Il vaut mieux séparer en 2 étapes.", isCorrect: true },
+                    { text: "Elle refusera de répondre.", isCorrect: false }
+                ],
+                feedback: "Le Séquençage. Le 'cerveau' de l'IA s'éparpille vite. Demandez d'abord d'extraire. Puis demandez de rédiger le mail."
+            },
+            {
+                level: "Q9", scenario: "Vous voulez vous entraîner à un appel de vente.",
+                question: "Quel prompt utiliseriez-vous ?",
+                options: [
+                    { text: "Quels sont les bons arguments de vente ?", isCorrect: false },
+                    { text: "Aide-moi à négocier.", isCorrect: false },
+                    { text: "Tu es le client. Je suis le commercial. Jouons la scène. Fais une objection à la fois.", isCorrect: true }
+                ],
+                feedback: "Le mode Simulateur. En attribuant un Rôle contradictoire à l'IA, elle devient un outil d'entraînement."
+            },
+            {
+                level: "Q10", scenario: "La Règle d'Or de cette Masterclass.",
+                question: "Que signifie l'acronyme R.O.C.F ?",
+                options: [
+                    { text: "Recherche, Optimisation, Calcul, Fin", isCorrect: false },
+                    { text: "Rôle, Objectif, Contexte, Format", isCorrect: true },
+                    { text: "Réponse, Ordre, Copie, Fichier", isCorrect: false }
+                ],
+                feedback: "Félicitations ! Si vous définissez ces 4 piliers, l'IA devient le meilleur assistant de votre équipe."
+            }
+        ];
+
+        let currentQuizIdx = 0;
+
+        function renderQuiz() {
+            const q = quizData[currentQuizIdx];
+            document.getElementById('quiz-level').innerText = q.level;
+            document.getElementById('quiz-progress').innerText = `${currentQuizIdx + 1}/10`;
+            document.getElementById('quiz-inner-bar').style.width = `${((currentQuizIdx + 1) / 10) * 100}%`;
+            document.getElementById('quiz-scenario-text').innerText = q.scenario;
+            document.getElementById('quiz-question').innerText = q.question;
+            
+            const optionsBox = document.getElementById('quiz-options');
+            optionsBox.innerHTML = '';
+            const labels = ['A', 'B', 'C'];
+            
+            q.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'quiz-option';
+                btn.innerHTML = `<span class="w-8 h-8 rounded-xl bg-slate-100 text-slate-500 font-bold flex items-center justify-center shrink-0 option-letter text-sm border-none">${labels[idx]}</span> <span>${opt.text}</span>`;
+                btn.onclick = () => handleAnswer(btn, opt.isCorrect, q.feedback);
+                optionsBox.appendChild(btn);
+            });
+
+            document.getElementById('quiz-feedback-container').classList.add('hidden');
+            document.getElementById('quiz-next-btn').classList.add('hidden');
+        }
+
+        function handleAnswer(clickedBtn, isCorrect, feedbackMsg) {
+            const allBtns = document.querySelectorAll('.quiz-option');
+            allBtns.forEach(b => { b.disabled = true; if(b !== clickedBtn) b.style.opacity = '0.4'; });
+
+            const letter = clickedBtn.querySelector('.option-letter');
+            const fbBox = document.getElementById('quiz-feedback-container');
+            
+            if(isCorrect) {
+                clickedBtn.classList.add('correct');
+                letter.classList.replace('bg-slate-100', 'bg-green-200');
+                letter.classList.replace('text-slate-500', 'text-green-800');
+                fbBox.className = 'mt-6 p-5 rounded-xl flex items-start gap-4 bg-emerald-50 text-emerald-900 shadow-sm border-none';
+                document.getElementById('quiz-feedback-icon').innerHTML = '<i data-lucide="check-circle" size="24" class="text-emerald-600 mt-0.5"></i>';
+                document.getElementById('quiz-feedback-title').innerText = "Exactement !";
+            } else {
+                clickedBtn.classList.add('wrong');
+                letter.classList.replace('bg-slate-100', 'bg-red-200');
+                letter.classList.replace('text-slate-500', 'text-red-800');
+                allBtns.forEach(b => {
+                    const textSpan = b.querySelectorAll('span')[1];
+                    const optObj = quizData[currentQuizIdx].options.find(o => o.text === textSpan.innerText);
+                    if(optObj && optObj.isCorrect) { b.style.opacity = '1'; b.classList.add('bg-green-50/50'); }
+                });
+                fbBox.className = 'mt-6 p-5 rounded-xl flex items-start gap-4 bg-red-50 text-red-900 shadow-sm border-none';
+                document.getElementById('quiz-feedback-icon').innerHTML = '<i data-lucide="x-circle" size="24" class="text-red-600 mt-0.5"></i>';
+                document.getElementById('quiz-feedback-title').innerText = "Attention au piège !";
+            }
+
+            document.getElementById('quiz-feedback-text').innerHTML = feedbackMsg;
+            fbBox.classList.remove('hidden');
+
+            const nextBtn = document.getElementById('quiz-next-btn');
+            if (currentQuizIdx < quizData.length - 1) {
+                nextBtn.innerHTML = 'Question Suivante <i data-lucide="arrow-right" size="16"></i>';
+            } else {
+                nextBtn.innerHTML = 'Terminer <i data-lucide="award" size="16"></i>';
+            }
+            nextBtn.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        window.loadNextQuestion = () => {
+            if (currentQuizIdx < quizData.length - 1) {
+                currentQuizIdx++;
+                renderQuiz();
+            } else {
+                document.getElementById('quiz-scenario').classList.add('hidden');
+                document.getElementById('quiz-question').innerText = "Masterclass Validée !";
+                document.getElementById('quiz-options').innerHTML = `
+                    <div class="text-center py-10">
+                        <div class="w-24 h-24 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner"><i data-lucide="award" size="48"></i></div>
+                        <p class="text-2xl text-slate-800 font-bold mb-2">Vous êtes prêt.</p>
+                        <p class="text-slate-500 font-medium">Ne discutez plus avec l'IA. Programmez avec R.O.C.F.</p>
+                    </div>
+                `;
+                document.getElementById('quiz-feedback-container').classList.add('hidden');
+                document.getElementById('quiz-next-btn').classList.add('hidden');
+                lucide.createIcons();
+            }
+        };
+
+        // Init
+        updateSlide();
+        renderQuiz();
+    })();
+    </script>
+</body>
+</html>
